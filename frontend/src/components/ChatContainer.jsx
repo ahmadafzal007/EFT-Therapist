@@ -74,7 +74,7 @@ export function ChatContainer({ isSidebarOpen, setIsSidebarOpen }) {
 
       {/* Chat messages */}
       <div ref={chatContainerRef} className="flex-1 p-4 overflow-auto no-scrollbar">
-        <div className="mx-auto max-w-2xl space-y-4">
+        <div className="mx-auto max-w-4xl space-y-4">
           {messages.map((message, index) => (
             <ChatMessage key={index} message={message} index={index} />
           ))}
