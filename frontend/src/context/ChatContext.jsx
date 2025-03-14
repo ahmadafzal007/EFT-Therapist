@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState } from "react"
+import { createContext, useContext, useState, useEffect } from "react"
 
 const ChatContext = createContext(undefined)
 
@@ -24,17 +24,30 @@ export function ChatProvider({ children }) {
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [isLoading, setIsLoading] = useState(false)
 
+  // Load messages from localStorage on mount
+  useEffect(() => {
+    const storedMessages = localStorage.getItem("chatMessages")
+    if (storedMessages) {
+      try {
+        setMessages(JSON.parse(storedMessages))
+      } catch (error) {
+        console.error("Error parsing stored messages:", error)
+      }
+    }
+  }, [])
+
+  // Store messages in localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("chatMessages", JSON.stringify(messages))
+  }, [messages])
+
   const sendMessage = async (content) => {
-    // Add user message
     const userMessage = { role: "user", content }
     setMessages((prev) => [...prev, userMessage])
-
-    // Set loading state
     setIsLoading(true)
 
     try {
-      // Make API call to the backend
-      const response = await fetch("http://localhost:8000/api/chat", {
+      const response = await fetch("http://localhost:8002/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,21 +61,13 @@ export function ChatProvider({ children }) {
 
       const data = await response.json()
 
-      // Format the response from the backend
-      const responseContent = `${data.response}
+      // Remove expert guidance and suggested steps details.
+      const responseContent = data.response
 
-**Expert Guidance:**
-${data.expert_guidance}
-
-**Suggested Steps:**
-${data.subtasks}`
-
-      // Add assistant response
       const assistantMessage = { role: "assistant", content: responseContent }
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
       console.error("Error sending message:", error)
-      // Add error message
       const errorMessage = {
         role: "assistant",
         content: "I'm sorry, I encountered an error connecting to the EFT service. Please try again.",
@@ -75,8 +80,10 @@ ${data.subtasks}`
 
   const resetSession = async () => {
     setMessages(INITIAL_MESSAGES)
+    localStorage.removeItem("chatMessages") // Clear stored session
+
     try {
-      const response = await fetch("http://localhost:8000/api/reset", {
+      const response = await fetch("http://localhost:8002/api/reset", {
         method: "POST",
       })
       if (!response.ok) {

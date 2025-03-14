@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react"
 import { gsap } from "gsap"
-// NEW: Import react-markdown
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { User, Bot } from "lucide-react"
 
 export function ChatMessage({ message }) {
   const messageRef = useRef(null)
@@ -33,8 +33,8 @@ export function ChatMessage({ message }) {
       }`}
     >
       {message.role !== "user" && (
-        <div className="h-6 w-6 rounded-full bg-white text-[10px] text-black flex items-center justify-center">
-          EFT
+        <div className="h-6 w-6 rounded-full mt-2 bg-white text-black flex items-center justify-center">
+          <Bot size={14} />
         </div>
       )}
 
@@ -43,15 +43,14 @@ export function ChatMessage({ message }) {
           message.role === "user" ? "bg-black text-white" : "bg-black text-white"
         }`}
       >
-        {/* Use ReactMarkdown to parse the message content as Markdown */}
         <ReactMarkdown remarkPlugins={[remarkGfm]} className="prose prose-invert">
           {message.content}
         </ReactMarkdown>
       </div>
 
       {message.role === "user" && (
-        <div className="h-6 w-6 rounded-full bg-white text-[10px] text-black flex items-center justify-center">
-          You
+        <div className="h-6 w-6 rounded-full mt-2 bg-white text-black flex items-center justify-center">
+          <User size={14} />
         </div>
       )}
     </div>

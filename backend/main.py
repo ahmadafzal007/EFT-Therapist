@@ -2,12 +2,11 @@ import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict
 from modules.eft_system import EFTTherapySystem
 from langchain.schema import HumanMessage, AIMessage  # For type checking messages
-import os
 from dotenv import load_dotenv
-from langchain.memory import ConversationBufferWindowMemory  # Import for reinitializing memory
+from langchain.memory import ConversationBufferWindowMemory
+from starlette.concurrency import run_in_threadpool  # To avoid blocking the event loop
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -35,14 +34,12 @@ app.add_middleware(
 # Initialize EFT System
 eft_system = EFTTherapySystem()
 
-# Pydantic models for request/response validation
+# Pydantic model for request/response validation
 class Message(BaseModel):
     content: str
 
 class ChatResponse(BaseModel):
     response: str
-    subtasks: str
-    expert_guidance: str
 
 class ErrorResponse(BaseModel):
     error: str
@@ -57,13 +54,11 @@ async def read_root():
 async def chat_endpoint(message: Message):
     logger.debug(f"Received chat message: {message.content}")
     try:
-        result = eft_system.process_query(message.content)
+        # Run the blocking EFT process_query call in a thread pool
+        result = await run_in_threadpool(eft_system.process_query, message.content)
         logger.debug(f"Chat response: {result}")
-        return ChatResponse(
-            response=result["final_response"],
-            subtasks=result["subtasks"],
-            expert_guidance=result["expert_guidance"]
-        )
+        # Return only the final conversational response
+        return ChatResponse(response=result["final_response"])
     except Exception as e:
         logger.exception("Error processing chat message.")
         raise HTTPException(status_code=500, detail=str(e))
@@ -110,7 +105,7 @@ async def get_history():
 async def reset_session():
     try:
         logger.debug("Resetting chat session.")
-        # Check if the memory object supports clear(); if not, reinitialize it.
+        # Reset memory either by calling clear() or reinitializing the memory object
         if hasattr(eft_system.memory, "clear") and callable(eft_system.memory.clear):
             eft_system.memory.clear()
             logger.debug("Called memory.clear() successfully.")
@@ -129,4 +124,4 @@ async def reset_session():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8002)
